@@ -7,30 +7,65 @@
 
 import ScreenSaver
 
-class GradientFlow: ScreenSaverView {
-    private var redPos: CGPoint = .zero
-    private var greenPos: CGPoint = .zero
-    private var bluePos: CGPoint = .zero
+class Projectile {
+    var position: CGPoint
+    var velocity: CGVector
+    var color: NSColor
     
-    private var redVel: CGVector = .zero
-    private var greenVel: CGVector = .zero
-    private var blueVel: CGVector = .zero
+    init(position: CGPoint, velocity: CGVector, color: NSColor) {
+        self.position = position
+        self.velocity = velocity
+        self.color = color
+    }
+}
+
+class GradientFlow: ScreenSaverView {
+    private var projs: [Projectile]
+    private var numProjs = 0
+    private var minProjs = 2
+    private var maxProjs = 4
     
     private var squareSize = 50
     
     private var perturbEveryNFrames = 120
     private var frameCount = 0
+    
+    private func randomColor() -> NSColor {
+//        switch Int.random(in: 0 ... 5) {
+//        case 0:
+//            return NSColor.red
+//        case 1:
+//            return NSColor.blue
+//        case 2:
+//            return NSColor.green
+//        case 3:
+//            return NSColor.yellow
+//        case 4:
+//            return NSColor.orange
+//        case 5:
+//            return NSColor.purple
+//        default:
+//            return NSColor.white
+//        }
+        return NSColor(red: CGFloat.random(in: 0.3...1), green: CGFloat.random(in: 0.3...1), blue: CGFloat.random(in: 0.3...1), alpha: 1)
+    }
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
-        super.init(frame: frame, isPreview: isPreview)
-        redPos = CGPoint(x: frame.width / 2, y: frame.height / 2)
-        greenPos = CGPoint(x: frame.width / 2, y: frame.height / 2)
-        bluePos = CGPoint(x: frame.width / 2, y: frame.height / 2)
+        numProjs = Int.random(in: minProjs ... maxProjs)
+        projs = []
         
-        redVel = initialVelocity()
-        greenVel = initialVelocity()
-        blueVel = initialVelocity()
+        super.init(frame: frame, isPreview: isPreview)
+        
+        for _ in 0 ... numProjs-1 {
+            projs.append(Projectile(
+                position: CGPoint(x: frame.width / 2, y: frame.height / 2),
+                velocity: initialVelocity(),
+                color: randomColor()
+            ))
+        }
+        
+        print(numProjs)
     }
     
     private func initialVelocity() -> CGVector {
@@ -64,12 +99,12 @@ class GradientFlow: ScreenSaverView {
         if frameCount >= perturbEveryNFrames {
             frameCount = 0
             
-            redVel.dx += CGFloat.random(in: -1.0...1.0)
-            redVel.dy += CGFloat.random(in: -1.0...1.0)
-            greenVel.dx += CGFloat.random(in: -1.0...1.0)
-            greenVel.dy += CGFloat.random(in: -1.0...1.0)
-            blueVel.dx += CGFloat.random(in: -1.0...1.0)
-            blueVel.dy += CGFloat.random(in: -1.0...1.0)
+            for i in 0 ... numProjs-1 {
+                projs[i].velocity.dx += CGFloat.random(in: -1.0...1.0)
+                projs[i].velocity.dy += CGFloat.random(in: -1.0...1.0)
+            }
+            
+            projs[Int.random(in: 0 ... numProjs-1)].color = randomColor()
         }
         
 //        let ballRect = NSRect(x: redPos.x,
@@ -84,9 +119,18 @@ class GradientFlow: ScreenSaverView {
     }
     
     func colorAt(p: CGPoint) -> NSColor {
-        let r = distancePct(d: distanceBetweenPoints(p1: p, p2: redPos))
-        let g = distancePct(d: distanceBetweenPoints(p1: p, p2: greenPos))
-        let b = distancePct(d: distanceBetweenPoints(p1: p, p2: bluePos))
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        for i in 0 ... numProjs-1 {
+            let d = distancePct(d: distanceBetweenPoints(p1: p, p2: projs[i].position))
+            r += d * projs[i].color.redComponent
+            g += d * projs[i].color.greenComponent
+            b += d * projs[i].color.blueComponent
+        }
+        r /= CGFloat(numProjs)
+        g /= CGFloat(numProjs)
+        b /= CGFloat(numProjs)
         
         return NSColor(red: r, green: g, blue: b, alpha: 1)
     }
@@ -104,33 +148,17 @@ class GradientFlow: ScreenSaverView {
         super.animateOneFrame()
 
         // Update the "state" of the screensaver in this function
-        if redPos.x + redVel.dx > frame.width || redPos.x + redVel.dx < 0 {
-            redVel.dx *= -1
+        for i in 0 ... numProjs-1 {
+            if projs[i].position.x + projs[i].velocity.dx > frame.width || projs[i].position.x + projs[i].velocity.dx < 0 {
+                projs[i].velocity.dx *= -1
+            }
+            if projs[i].position.y + projs[i].velocity.dy > frame.height || projs[i].position.y + projs[i].velocity.dy < 0 {
+                projs[i].velocity.dy *= -1
+            }
+            
+            projs[i].position.x += projs[i].velocity.dx
+            projs[i].position.y += projs[i].velocity.dy
         }
-        if redPos.y + redVel.dy > frame.height || redPos.y + redVel.dy < 0 {
-            redVel.dy *= -1
-        }
-        
-        if bluePos.x + blueVel.dx > frame.width || bluePos.x + blueVel.dx < 0 {
-            blueVel.dx *= -1
-        }
-        if bluePos.y + blueVel.dy > frame.height || bluePos.y + blueVel.dy < 0 {
-            blueVel.dy *= -1
-        }
-        
-        if greenPos.x + greenVel.dx > frame.width || greenPos.x + greenVel.dx < 0 {
-            greenVel.dx *= -1
-        }
-        if greenPos.y + greenVel.dy > frame.height || greenPos.y + greenVel.dy < 0 {
-            greenVel.dy *= -1
-        }
-        
-        redPos.x += redVel.dx
-        redPos.y += redVel.dy
-        bluePos.x += blueVel.dx
-        bluePos.y += blueVel.dy
-        greenPos.x += greenVel.dx
-        greenPos.y += greenVel.dy
         
         setNeedsDisplay(bounds);
     }
