@@ -16,13 +16,25 @@ class GradientFlow: ScreenSaverView {
     private var greenVel: CGVector = .zero
     private var blueVel: CGVector = .zero
     
-    private var squareSize = 50
+    private let squareSize: Int
+    private let isPreviewFrame: Bool
     
     private var perturbEveryNFrames = 120
     private var frameCount = 0
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
+        if frame.height < 200 && frame.width < 200 {
+            // This is the preview window in the Screen Saver settings menu
+            // Window is much smaller, so use a smaller square size of one pixel
+            squareSize = 1
+            isPreviewFrame = true
+        } else {
+            squareSize = 50
+            isPreviewFrame = false
+            
+        }
+        
         super.init(frame: frame, isPreview: isPreview)
         redPos = CGPoint(x: frame.width / 2, y: frame.height / 2)
         greenPos = CGPoint(x: frame.width / 2, y: frame.height / 2)
@@ -34,8 +46,16 @@ class GradientFlow: ScreenSaverView {
     }
     
     private func initialVelocity() -> CGVector {
-        let desiredVelocityMagnitude: CGFloat = 15
-        let xVelocity = CGFloat.random(in: 5.5...10.5)
+        let desiredVelocityMagnitude: CGFloat
+        let xRange: ClosedRange<CGFloat>
+        if !isPreviewFrame {
+            desiredVelocityMagnitude = 15
+            xRange = 5.5...10.5
+        } else {
+            desiredVelocityMagnitude = 1.5
+            xRange = 0.55...1.05
+        }
+        let xVelocity = CGFloat.random(in: xRange)
         let xSign: CGFloat = Bool.random() ? 1 : -1
         let yVelocity = sqrt(pow(desiredVelocityMagnitude, 2) - pow(xVelocity, 2))
         let ySign: CGFloat = Bool.random() ? 1 : -1
@@ -64,12 +84,17 @@ class GradientFlow: ScreenSaverView {
         if frameCount >= perturbEveryNFrames {
             frameCount = 0
             
-            redVel.dx += CGFloat.random(in: -1.0...1.0)
-            redVel.dy += CGFloat.random(in: -1.0...1.0)
-            greenVel.dx += CGFloat.random(in: -1.0...1.0)
-            greenVel.dy += CGFloat.random(in: -1.0...1.0)
-            blueVel.dx += CGFloat.random(in: -1.0...1.0)
-            blueVel.dy += CGFloat.random(in: -1.0...1.0)
+            let range: ClosedRange<CGFloat>
+            if isPreviewFrame {
+                range = -0.1...0.1
+            } else {range = -1.0...1.0}
+            
+            redVel.dx += CGFloat.random(in: range)
+            redVel.dy += CGFloat.random(in: range)
+            greenVel.dx += CGFloat.random(in: range)
+            greenVel.dy += CGFloat.random(in: range)
+            blueVel.dx += CGFloat.random(in: range)
+            blueVel.dy += CGFloat.random(in: range)
         }
         
 //        let ballRect = NSRect(x: redPos.x,
